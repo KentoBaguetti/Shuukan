@@ -8,7 +8,7 @@ import {
 	View,
 } from "react-native";
 
-const POMODORO_DURATION = 25 * 60; // 25 minutes
+const POMODORO_DURATION = 45 * 60; // 45 minutes, the base time
 
 const Index = () => {
 	// Timer state
@@ -16,7 +16,7 @@ const Index = () => {
 	const [isRunning, setIsRunning] = useState(false);
 
 	// Keep track of interval
-	const intervalRef = useRef<NodeJS.Timer | null>(null);
+	const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
 	// Modal state
 	const [modalVisible, setModalVisible] = useState(false);
@@ -74,7 +74,7 @@ const Index = () => {
 
 	const handleSetTime = () => {
 		const mins = Number.parseInt(inputMinutes, 10);
-		if (!isNaN(mins) && mins > 0) {
+		if (!Number.isNaN(mins) && mins > 0) {
 			setTime(mins * 60);
 		}
 		setModalVisible(false);
