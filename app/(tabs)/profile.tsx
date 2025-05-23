@@ -3,8 +3,8 @@ import { Text, View } from "react-native";
 
 const profile = () => {
 	return (
-		<View>
-			<Text>profile</Text>
+		<View className="flex-1 justify-center items-center bg-gray-950">
+			<Text className="text-white">Profile</Text>
 		</View>
 	);
 };

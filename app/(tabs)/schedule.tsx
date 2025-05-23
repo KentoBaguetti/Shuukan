@@ -24,7 +24,7 @@ export default function Schedule() {
 	const router = useRouter();
 	const { width } = Dimensions.get("window");
 	const hourHeight = 60; // Height for one hour in pixels
-	const timeColumnWidth = 50; // Width of time column
+	const timeColumnWidth = 42; // Width of time column
 	const dayColumnWidth = (width - timeColumnWidth) / DAYS.length;
 
 	// Events by day name
@@ -175,11 +175,6 @@ export default function Schedule() {
 
 	return (
 		<SafeAreaView className="flex-1 bg-gray-950">
-			{/* Header */}
-			<View className="flex-row items-center bg-gray-900 px-4 py-3 justify-center">
-				<Text className="text-white text-lg font-semibold">Schedule</Text>
-			</View>
-
 			{/* Day headers */}
 			<View className="flex-row border-b border-gray-800">
 				{/* Empty cell for time column */}
