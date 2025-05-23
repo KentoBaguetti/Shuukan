@@ -26,6 +26,15 @@ export default function TabsLayout() {
 				}}
 			/>
 			<Tabs.Screen
+				name="schedule"
+				options={{
+					title: "Schedule",
+					tabBarIcon: ({ color }) => (
+						<View style={{ width: 24, height: 24, backgroundColor: color }} />
+					),
+				}}
+			/>
+			<Tabs.Screen
 				name="profile"
 				options={{
 					title: "Profile",

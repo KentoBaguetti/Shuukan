@@ -1,3 +1,4 @@
+import * as ScreenOrientation from "expo-screen-orientation";
 import React, { useEffect, useRef, useState } from "react";
 import {
 	Modal,
@@ -24,6 +25,7 @@ const Index = () => {
 
 	// Timer effect
 	useEffect(() => {
+		ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.PORTRAIT_UP);
 		if (isRunning) {
 			intervalRef.current = setInterval(() => {
 				setTime((prev) => (prev > 0 ? prev - 1 : 0));
@@ -42,6 +44,7 @@ const Index = () => {
 
 	// Reset timer when finished
 	useEffect(() => {
+		ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.PORTRAIT_UP);
 		if (time === 0 && isRunning) {
 			setIsRunning(false);
 		}
