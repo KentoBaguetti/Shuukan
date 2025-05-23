@@ -1,8 +1,10 @@
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { format } from "date-fns";
 import { useRouter } from "expo-router";
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
+	Alert,
 	Dimensions,
 	Modal,
 	Pressable,
@@ -19,6 +21,9 @@ const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 const HOURS = Array.from({ length: 24 }, (_, i) => i);
 
 type Event = { title: string; location: string; start: string; end: string };
+
+// Storage key for schedule data
+const STORAGE_KEY = "shuukan_schedule_data";
 
 export default function Schedule() {
 	const router = useRouter();
@@ -47,8 +52,44 @@ export default function Schedule() {
 	const [isEditing, setIsEditing] = useState(false);
 	const [editIndex, setEditIndex] = useState<number>(-1);
 
-	// Can add/save validation
-	const canSave = title.trim() !== "" && location.trim() !== "";
+	// Add canSave computed property
+	const canSave = useMemo(() => {
+		return title.trim() !== "" && location.trim() !== "";
+	}, [title, location]);
+
+	// Load saved schedule data when component mounts
+	useEffect(() => {
+		const loadScheduleData = async () => {
+			try {
+				const savedData = await AsyncStorage.getItem(STORAGE_KEY);
+				if (savedData) {
+					setItems(JSON.parse(savedData));
+				}
+			} catch (error) {
+				console.error("Failed to load schedule data:", error);
+				Alert.alert(
+					"Error",
+					"Failed to load your schedule. Some data may be missing.",
+				);
+			}
+		};
+
+		loadScheduleData();
+	}, []);
+
+	// Save schedule data whenever items change
+	useEffect(() => {
+		const saveScheduleData = async () => {
+			try {
+				await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(items));
+			} catch (error) {
+				console.error("Failed to save schedule data:", error);
+				Alert.alert("Error", "Failed to save your changes to schedule.");
+			}
+		};
+
+		saveScheduleData();
+	}, [items]);
 
 	// Open add modal
 	const openAddModal = (d: string) => {
