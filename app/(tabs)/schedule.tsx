@@ -1,7 +1,7 @@
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { format } from "date-fns";
 import { useRouter } from "expo-router";
-import React, { useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
 	Dimensions,
 	Modal,
@@ -26,6 +26,7 @@ export default function Schedule() {
 	const hourHeight = 60; // Height for one hour in pixels
 	const timeColumnWidth = 42; // Width of time column
 	const dayColumnWidth = (width - timeColumnWidth) / DAYS.length;
+	const scrollViewRef = useRef<ScrollView>(null);
 
 	// Events by day name
 	const [items, setItems] = useState<Record<string, Event[]>>(
@@ -173,6 +174,18 @@ export default function Schedule() {
 		};
 	};
 
+	// Scroll to 12:00 when component mounts
+	useEffect(() => {
+		// Short delay to ensure the ScrollView is rendered
+		const timer = setTimeout(() => {
+			if (scrollViewRef.current) {
+				scrollViewRef.current.scrollTo({ y: 7 * hourHeight, animated: false });
+			}
+		}, 100);
+
+		return () => clearTimeout(timer);
+	}, []);
+
 	return (
 		<SafeAreaView className="flex-1 bg-gray-950">
 			{/* Day headers */}
@@ -194,7 +207,7 @@ export default function Schedule() {
 			</View>
 
 			{/* Timeline with events */}
-			<ScrollView>
+			<ScrollView ref={scrollViewRef}>
 				<View className="flex-row">
 					{/* Time column */}
 					<View style={{ width: timeColumnWidth }}>
