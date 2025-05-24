@@ -6,14 +6,17 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
 	Alert,
 	Dimensions,
+	FlatList,
 	Modal,
 	Pressable,
-	ScrollView,
 	TextInput,
 	TouchableOpacity,
 	View,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import {
+	SafeAreaView,
+	useSafeAreaInsets,
+} from "react-native-safe-area-context";
 import { Text } from "../../components/StyledText";
 
 const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
@@ -27,11 +30,23 @@ const STORAGE_KEY = "shuukan_schedule_data";
 
 export default function Schedule() {
 	const router = useRouter();
-	const { width } = Dimensions.get("window");
-	const hourHeight = 60; // Height for one hour in pixels
+	const { width, height } = Dimensions.get("window");
 	const timeColumnWidth = 42; // Width of time column
-	const dayColumnWidth = (width - timeColumnWidth) / DAYS.length;
-	const scrollViewRef = useRef<ScrollView>(null);
+	const dayColumnWidth = width - timeColumnWidth; // Full width minus time column
+	const flatListRef = useRef<FlatList>(null);
+	const insets = useSafeAreaInsets();
+
+	// Bottom tab bar height (approximate)
+	const tabBarHeight = 200;
+
+	// Calculate hour height to fit all 24 hours on screen
+	// Subtract header height (approx 60px), bottom tab bar, and padding
+	const bottomInset = insets.bottom + 75; // 50px for tab bar itself
+	const availableHeight = height - 60 - bottomInset - 20;
+	const hourHeight = availableHeight / 24;
+
+	// Current day index (0-6)
+	const [currentDayIndex, setCurrentDayIndex] = useState(0);
 
 	// Events by day name
 	const [items, setItems] = useState<Record<string, Event[]>>(
@@ -91,9 +106,10 @@ export default function Schedule() {
 		saveScheduleData();
 	}, [items]);
 
-	// Open add modal
-	const openAddModal = (d: string) => {
-		setDay(d);
+	// Open add modal for the current day
+	const openAddModal = () => {
+		const currentDay = DAYS[currentDayIndex];
+		setDay(currentDay);
 		setTitle("");
 		setLocation("");
 		setStart(new Date());
@@ -106,9 +122,10 @@ export default function Schedule() {
 	};
 
 	// Open edit modal
-	const openEditModal = (d: string, index: number) => {
-		const event = items[d][index];
-		setDay(d);
+	const openEditModal = (index: number) => {
+		const currentDay = DAYS[currentDayIndex];
+		const event = items[currentDay][index];
+		setDay(currentDay);
 		setTitle(event.title);
 		setLocation(event.location);
 
@@ -130,6 +147,69 @@ export default function Schedule() {
 		setIsEditing(true);
 		setEditIndex(index);
 		setVisible(true);
+	};
+
+	// Navigate to previous day with wrap-around
+	const goToPrevDay = () => {
+		setCurrentDayIndex((prev) => (prev === 0 ? 6 : prev - 1));
+	};
+
+	// Navigate to next day with wrap-around
+	const goToNextDay = () => {
+		setCurrentDayIndex((prev) => (prev === 6 ? 0 : prev + 1));
+	};
+
+	// Handle day change when FlatList page changes
+	const handleViewableItemsChanged = ({ viewableItems }) => {
+		if (viewableItems.length > 0) {
+			setCurrentDayIndex(viewableItems[0].index);
+		}
+	};
+
+	// Render a single day column
+	const renderDay = ({ item, index }) => {
+		const day = DAYS[index];
+		return (
+			<View style={{ width: dayColumnWidth }}>
+				{/* Hour grid lines */}
+				{HOURS.map((hour) => (
+					<View
+						key={hour}
+						style={{ height: hourHeight }}
+						className="border-b border-gray-800"
+					/>
+				))}
+
+				{/* Events for this day */}
+				{items[day].map((event, eventIndex) => {
+					const { top, height } = getEventStyles(event.start, event.end);
+					return (
+						<TouchableOpacity
+							key={eventIndex}
+							style={{
+								position: "absolute",
+								top,
+								left: 2,
+								right: 2,
+								height,
+							}}
+							className="bg-blue-600 rounded p-1 shadow-md"
+							onPress={() => openEditModal(eventIndex)}
+						>
+							<Text
+								className="text-white text-xs font-semibold"
+								numberOfLines={1}
+							>
+								{event.title}
+							</Text>
+							<Text className="text-gray-200 text-xs" numberOfLines={1}>
+								{event.start} - {event.end}
+							</Text>
+						</TouchableOpacity>
+					);
+				})}
+			</View>
+		);
 	};
 
 	// Save event (works for both add and edit)
@@ -211,111 +291,70 @@ export default function Schedule() {
 
 		return {
 			top: startPosition,
-			height: Math.max(height, 30), // Minimum height of 30px
+			height: Math.max(height, Math.min(30, hourHeight * 0.8)), // Adaptive minimum height
 		};
 	};
 
-	// Scroll to 12:00 when component mounts
-	useEffect(() => {
-		// Short delay to ensure the ScrollView is rendered
-		const timer = setTimeout(() => {
-			if (scrollViewRef.current) {
-				scrollViewRef.current.scrollTo({ y: 7 * hourHeight, animated: false });
-			}
-		}, 100);
-
-		return () => clearTimeout(timer);
-	}, []);
-
 	return (
 		<SafeAreaView className="flex-1 bg-gray-950">
-			{/* Day headers */}
-			<View className="flex-row border-b border-gray-800">
-				{/* Empty cell for time column */}
-				<View style={{ width: timeColumnWidth }} className="bg-gray-900" />
+			{/* Header with day navigation */}
+			<View className="flex-row items-center justify-between p-3 border-b border-gray-800">
+				<TouchableOpacity onPress={goToPrevDay} className="p-2">
+					<Text className="text-gray-200 text-lg">←</Text>
+				</TouchableOpacity>
 
-				{/* Day headers */}
-				{DAYS.map((d) => (
-					<TouchableOpacity
-						key={d}
-						style={{ width: dayColumnWidth }}
-						onPress={() => openAddModal(d)}
-						className="py-3 items-center bg-gray-800"
-					>
-						<Text className="text-gray-200 font-medium">{d}</Text>
-					</TouchableOpacity>
-				))}
+				<TouchableOpacity onPress={openAddModal}>
+					<Text className="text-gray-200 font-bold text-xl">
+						{DAYS[currentDayIndex]}
+					</Text>
+				</TouchableOpacity>
+
+				<TouchableOpacity onPress={goToNextDay} className="p-2">
+					<Text className="text-gray-200 text-lg">→</Text>
+				</TouchableOpacity>
 			</View>
 
-			{/* Timeline with events */}
-			<ScrollView ref={scrollViewRef}>
-				<View className="flex-row">
-					{/* Time column */}
-					<View style={{ width: timeColumnWidth }}>
-						{HOURS.map((hour) => (
-							<View
-								key={hour}
-								style={{ height: hourHeight }}
-								className="border-b border-gray-800 justify-center"
-							>
-								<Text className="text-gray-400 text-xs text-right pr-2">
-									{hour.toString().padStart(2, "0")}:00
-								</Text>
-							</View>
-						))}
-					</View>
-
-					{/* Day columns with events */}
-					{DAYS.map((d) => (
+			{/* Main schedule grid */}
+			<View className="flex-1 flex-row">
+				{/* Time column - stays fixed on the left */}
+				<View style={{ width: timeColumnWidth }}>
+					{HOURS.map((hour) => (
 						<View
-							key={d}
-							style={{ width: dayColumnWidth }}
-							className="relative border-l border-gray-800"
+							key={hour}
+							style={{ height: hourHeight }}
+							className="border-b border-gray-800 justify-center"
 						>
-							{/* Hour grid lines */}
-							{HOURS.map((hour) => (
-								<View
-									key={hour}
-									style={{ height: hourHeight }}
-									className="border-b border-gray-800"
-								/>
-							))}
-
-							{/* Events */}
-							{items[d].map((event, index) => {
-								const { top, height } = getEventStyles(event.start, event.end);
-								return (
-									<TouchableOpacity
-										key={index}
-										style={{
-											position: "absolute",
-											top,
-											left: 2,
-											right: 2,
-											height,
-										}}
-										className="bg-blue-600 rounded p-1 shadow-md"
-										onPress={() => openEditModal(d, index)}
-									>
-										<Text
-											className="text-white text-xs font-semibold"
-											numberOfLines={1}
-										>
-											{event.title}
-										</Text>
-										<Text className="text-gray-200 text-xs" numberOfLines={1}>
-											{event.start} - {event.end}
-										</Text>
-									</TouchableOpacity>
-								);
-							})}
+							<Text className="text-gray-400 text-xs text-right pr-2">
+								{hour.toString().padStart(2, "0")}:00
+							</Text>
 						</View>
 					))}
 				</View>
-			</ScrollView>
 
-			{/* Add/Edit Event Modal */}
+				{/* Day view with horizontal swipe */}
+				<FlatList
+					ref={flatListRef}
+					data={DAYS}
+					horizontal
+					pagingEnabled
+					showsHorizontalScrollIndicator={false}
+					renderItem={renderDay}
+					keyExtractor={(item) => item}
+					initialScrollIndex={currentDayIndex}
+					getItemLayout={(_, index) => ({
+						length: dayColumnWidth,
+						offset: dayColumnWidth * index,
+						index,
+					})}
+					onViewableItemsChanged={handleViewableItemsChanged}
+					viewabilityConfig={{ itemVisiblePercentThreshold: 50 }}
+					scrollEventThrottle={16}
+				/>
+			</View>
+
+			{/* Modal content unchanged */}
 			<Modal visible={visible} transparent animationType="fade">
+				{/* Modal content unchanged */}
 				<Pressable className="flex-1 bg-black/50" onPress={applyTime}>
 					<View
 						className="flex-1 justify-center px-4"
@@ -339,6 +378,7 @@ export default function Schedule() {
 								</TouchableOpacity>
 							</View>
 
+							{/* Modal body - unchanged */}
 							<View className="p-4">
 								{/* Title input */}
 								<TextInput
@@ -396,7 +436,7 @@ export default function Schedule() {
 								)}
 							</View>
 
-							{/* Time picker - now in Apple style */}
+							{/* Time picker - unchanged */}
 							{pickerMode && (
 								<View className="border-t border-gray-200">
 									<View className="flex-row justify-between items-center p-3 bg-gray-100">
