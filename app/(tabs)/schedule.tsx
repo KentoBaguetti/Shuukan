@@ -9,12 +9,12 @@ import {
 	Modal,
 	Pressable,
 	ScrollView,
-	Text,
 	TextInput,
 	TouchableOpacity,
 	View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { Text } from "../../components/StyledText";
 
 const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 // Generate hours from 0-23

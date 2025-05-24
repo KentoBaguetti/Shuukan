@@ -3,11 +3,11 @@ import React, { useEffect, useRef, useState } from "react";
 import {
 	Modal,
 	Pressable,
-	Text,
 	TextInput,
 	TouchableOpacity,
 	View,
 } from "react-native";
+import { Text } from "../../components/StyledText";
 
 const POMODORO_DURATION = 45 * 60; // 45 minutes, the base time
 
