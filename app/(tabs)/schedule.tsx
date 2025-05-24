@@ -268,12 +268,18 @@ export default function Schedule() {
 							onPress={() => openEditModal(eventIndex)}
 						>
 							<Text
-								className="text-white text-xs font-semibold"
+								className="text-white text-2xl font-semibold"
 								numberOfLines={1}
 							>
 								{event.title}
 							</Text>
-							<Text className="text-gray-200 text-xs" numberOfLines={1}>
+							<Text
+								className="text-white text-1xl font-semibold"
+								numberOfLines={1}
+							>
+								{event.location}
+							</Text>
+							<Text className="text-gray-200 text-lg" numberOfLines={1}>
 								{event.start} - {event.end}
 							</Text>
 						</TouchableOpacity>
@@ -373,12 +379,16 @@ export default function Schedule() {
 				<TouchableOpacity onPress={goToPrevDay} className="p-2">
 					<Text className="text-gray-200 text-lg">←</Text>
 				</TouchableOpacity>
-
-				<TouchableOpacity onPress={openAddModal}>
-					<Text className="text-gray-200 font-bold text-xl">
-						{DAYS[currentDayIndex]}
-					</Text>
-				</TouchableOpacity>
+				<View className="flex-1 justify-center items-center">
+					<TouchableOpacity onPress={openAddModal}>
+						<Text className="text-gray-200 font-bold text-xl text-center">
+							{DAYS[currentDayIndex]}
+						</Text>
+						<Text className="text-gray-500 text-xs">
+							Click me to add an event!
+						</Text>
+					</TouchableOpacity>
+				</View>
 
 				<TouchableOpacity onPress={goToNextDay} className="p-2">
 					<Text className="text-gray-200 text-lg">→</Text>
