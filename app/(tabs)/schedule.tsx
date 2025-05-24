@@ -13,6 +13,7 @@ import {
 	TouchableOpacity,
 	View,
 } from "react-native";
+
 import {
 	SafeAreaView,
 	useSafeAreaInsets,
@@ -20,6 +21,11 @@ import {
 import { Text } from "../../components/StyledText";
 
 const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+
+// Create extended data array for circular scrolling
+// This includes the real days (indexes 1-7) with duplicates at both ends
+const EXTENDED_DAYS = [...DAYS.slice(-1), ...DAYS, ...DAYS.slice(0, 1)];
+
 // Generate hours from 0-23
 const HOURS = Array.from({ length: 24 }, (_, i) => i);
 
@@ -31,10 +37,13 @@ const STORAGE_KEY = "shuukan_schedule_data";
 export default function Schedule() {
 	const router = useRouter();
 	const { width, height } = Dimensions.get("window");
-	const timeColumnWidth = 42; // Width of time column
+	const timeColumnWidth = 50; // Width of time column
 	const dayColumnWidth = width - timeColumnWidth; // Full width minus time column
 	const flatListRef = useRef<FlatList>(null);
 	const insets = useSafeAreaInsets();
+
+	// Track if scroll was triggered by user or programmatically
+	const isManualScrollRef = useRef(true);
 
 	// Bottom tab bar height (approximate)
 	const tabBarHeight = 200;
@@ -45,8 +54,11 @@ export default function Schedule() {
 	const availableHeight = height - 60 - bottomInset - 20;
 	const hourHeight = availableHeight / 24;
 
-	// Current day index (0-6)
+	// Current day index (0-6) for the real days
 	const [currentDayIndex, setCurrentDayIndex] = useState(0);
+
+	// Adjust to match the extended array (index 1 is Monday)
+	const extendedIndex = useMemo(() => currentDayIndex + 1, [currentDayIndex]);
 
 	// Events by day name
 	const [items, setItems] = useState<Record<string, Event[]>>(
@@ -151,24 +163,83 @@ export default function Schedule() {
 
 	// Navigate to previous day with wrap-around
 	const goToPrevDay = () => {
-		setCurrentDayIndex((prev) => (prev === 0 ? 6 : prev - 1));
+		isManualScrollRef.current = false;
+		const newIndex = currentDayIndex === 0 ? 6 : currentDayIndex - 1;
+		setCurrentDayIndex(newIndex);
+
+		// Scroll to the extended array position (+1)
+		flatListRef.current?.scrollToIndex({
+			index: newIndex + 1,
+			animated: true,
+		});
 	};
 
 	// Navigate to next day with wrap-around
 	const goToNextDay = () => {
-		setCurrentDayIndex((prev) => (prev === 6 ? 0 : prev + 1));
+		isManualScrollRef.current = false;
+		const newIndex = currentDayIndex === 6 ? 0 : currentDayIndex + 1;
+		setCurrentDayIndex(newIndex);
+
+		// Scroll to the extended array position (+1)
+		flatListRef.current?.scrollToIndex({
+			index: newIndex + 1,
+			animated: true,
+		});
 	};
 
-	// Handle day change when FlatList page changes
+	// Handle viewable items changed
 	const handleViewableItemsChanged = ({ viewableItems }) => {
-		if (viewableItems.length > 0) {
-			setCurrentDayIndex(viewableItems[0].index);
+		if (!isManualScrollRef.current || viewableItems.length === 0) return;
+
+		const visibleIndex = viewableItems[0].index;
+
+		// Handle wraparound
+		if (visibleIndex === 0) {
+			// User scrolled to Sunday duplicate at beginning
+			// Move to the real Sunday
+			setTimeout(() => {
+				flatListRef.current?.scrollToIndex({
+					index: 7,
+					animated: false,
+				});
+				setCurrentDayIndex(6); // Sunday
+			}, 10);
+		} else if (visibleIndex === 8) {
+			// User scrolled to Monday duplicate at end
+			// Move to the real Monday
+			setTimeout(() => {
+				flatListRef.current?.scrollToIndex({
+					index: 1,
+					animated: false,
+				});
+				setCurrentDayIndex(0); // Monday
+			}, 10);
+		} else if (visibleIndex > 0 && visibleIndex < 8) {
+			// User is on a real day (1-7)
+			setCurrentDayIndex(visibleIndex - 1);
 		}
 	};
 
+	// Initialize flatlist to the real first day (Monday at index 1)
+	useEffect(() => {
+		setTimeout(() => {
+			flatListRef.current?.scrollToIndex({
+				index: 1, // Monday in extended array
+				animated: false,
+			});
+		}, 100);
+	}, []);
+
 	// Render a single day column
 	const renderDay = ({ item, index }) => {
-		const day = DAYS[index];
+		// Map from extended index to the real day name
+		let dayName;
+		if (index === 0)
+			dayName = DAYS[6]; // Sunday duplicate at beginning
+		else if (index === 8)
+			dayName = DAYS[0]; // Monday duplicate at end
+		else dayName = DAYS[index - 1]; // Real days
+
 		return (
 			<View style={{ width: dayColumnWidth }}>
 				{/* Hour grid lines */}
@@ -181,7 +252,7 @@ export default function Schedule() {
 				))}
 
 				{/* Events for this day */}
-				{items[day].map((event, eventIndex) => {
+				{items[dayName]?.map((event, eventIndex) => {
 					const { top, height } = getEventStyles(event.start, event.end);
 					return (
 						<TouchableOpacity
@@ -334,13 +405,13 @@ export default function Schedule() {
 				{/* Day view with horizontal swipe */}
 				<FlatList
 					ref={flatListRef}
-					data={DAYS}
+					data={EXTENDED_DAYS}
 					horizontal
 					pagingEnabled
 					showsHorizontalScrollIndicator={false}
 					renderItem={renderDay}
-					keyExtractor={(item) => item}
-					initialScrollIndex={currentDayIndex}
+					keyExtractor={(item, index) => `${item}-${index}`}
+					initialScrollIndex={1} // Start at the real Monday (index 1)
 					getItemLayout={(_, index) => ({
 						length: dayColumnWidth,
 						offset: dayColumnWidth * index,
@@ -349,6 +420,9 @@ export default function Schedule() {
 					onViewableItemsChanged={handleViewableItemsChanged}
 					viewabilityConfig={{ itemVisiblePercentThreshold: 50 }}
 					scrollEventThrottle={16}
+					onScrollBeginDrag={() => {
+						isManualScrollRef.current = true;
+					}}
 				/>
 			</View>
 
