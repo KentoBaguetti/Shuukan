@@ -343,6 +343,7 @@ export default function Schedule() {
 								{/* Title input */}
 								<TextInput
 									placeholder="Title"
+									placeholderTextColor="#808080"
 									className="border-b border-gray-300 pb-2 mb-4 text-base"
 									value={title}
 									onChangeText={setTitle}
@@ -351,6 +352,7 @@ export default function Schedule() {
 								{/* Location input */}
 								<TextInput
 									placeholder="Location or Video Call"
+									placeholderTextColor="#808080"
 									className="border-b border-gray-300 pb-2 mb-4 text-base"
 									value={location}
 									onChangeText={setLocation}
