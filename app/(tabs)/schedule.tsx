@@ -233,7 +233,7 @@ export default function Schedule() {
 	// Render a single day column
 	const renderDay = ({ item, index }) => {
 		// Map from extended index to the real day name
-		let dayName;
+		let dayName: string;
 		if (index === 0)
 			dayName = DAYS[6]; // Sunday duplicate at beginning
 		else if (index === 8)
@@ -250,38 +250,82 @@ export default function Schedule() {
 						className="border-b border-gray-800"
 					/>
 				))}
-
 				{/* Events for this day */}
 				{items[dayName]?.map((event, eventIndex) => {
 					const { top, height } = getEventStyles(event.start, event.end);
+					const isShortEvent = height < hourHeight; // Event shorter than 1 hour
+
+					// Truncate text for display
+					const truncateText = (text: string, maxLength: number) => {
+						return text.length > maxLength
+							? `${text.substring(0, maxLength)}...`
+							: text;
+					};
+
+					const displayTitle = truncateText(
+						event.title,
+						isShortEvent ? 15 : 20,
+					);
+					const displayLocation = truncateText(
+						event.location,
+						isShortEvent ? 12 : 18,
+					);
+
 					return (
 						<TouchableOpacity
-							key={eventIndex}
+							key={`${dayName}-${eventIndex}-${event.title}-${event.start}`}
 							style={{
 								position: "absolute",
 								top,
 								left: 2,
 								right: 2,
 								height,
+								flexDirection: isShortEvent ? "row" : "column",
+								alignItems: isShortEvent ? "center" : "flex-start",
+								justifyContent: isShortEvent ? "space-between" : "flex-start",
 							}}
 							className="bg-blue-600 rounded p-1 shadow-md"
 							onPress={() => openEditModal(eventIndex)}
 						>
-							<Text
-								className="text-white text-2xl font-semibold"
-								numberOfLines={1}
-							>
-								{event.title}
-							</Text>
-							<Text
-								className="text-white text-1xl font-semibold"
-								numberOfLines={1}
-							>
-								{event.location}
-							</Text>
-							<Text className="text-gray-200 text-lg" numberOfLines={1}>
-								{event.start} - {event.end}
-							</Text>
+							{isShortEvent ? (
+								// Horizontal layout for short events - all text side by side
+								<View className="flex-row items-center justify-between w-full">
+									<Text
+										className="text-white text-xs font-semibold flex-shrink"
+										numberOfLines={1}
+									>
+										{displayTitle}
+									</Text>
+									<Text
+										className="text-white text-xs mx-1 flex-shrink"
+										numberOfLines={1}
+									>
+										{displayLocation}
+									</Text>
+									<Text
+										className="text-gray-200 text-xs flex-shrink-0"
+										numberOfLines={1}
+									>
+										{event.start}
+									</Text>
+								</View>
+							) : (
+								// Vertical layout for longer events
+								<>
+									<Text
+										className="text-white text-sm font-semibold"
+										numberOfLines={1}
+									>
+										{displayTitle}
+									</Text>
+									<Text className="text-white text-sm" numberOfLines={1}>
+										{displayLocation}
+									</Text>
+									<Text className="text-gray-200 text-xs" numberOfLines={1}>
+										{event.start} - {event.end}
+									</Text>
+								</>
+							)}
 						</TouchableOpacity>
 					);
 				})}
